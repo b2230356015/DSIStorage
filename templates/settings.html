@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Settings</h1>
+<hr>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<!-- Display Name, Surname, Role, Şube (not editable) -->
+<div class="mb-4" style="max-width: 500px;">
+  <p><strong>Name:</strong> {{ user.name }}</p>
+  <p><strong>Surname:</strong> {{ user.surname }}</p>
+  <p><strong>Role:</strong> {{ user.role }}</p>
+  <p><strong>Şube:</strong> {{ user.sube }}</p>
+</div>
+
+<!-- Email update form -->
+<form method="POST" style="max-width: 500px;">
+  <input type="hidden" name="form_type" value="update_email">
+  <div class="mb-3">
+    <label for="email" class="form-label">Email</label>
+    <input type="email" id="email" name="email" class="form-control" value="{{ user.email }}" required>
+  </div>
+  <button type="submit" class="btn btn-primary">Update Email</button>
+</form>
+
+<hr class="my-4" style="max-width: 500px;">
+
+<!-- Password change form -->
+<form method="POST" style="max-width: 500px;">
+  <input type="hidden" name="form_type" value="change_password">
+  <div class="mb-3">
+    <label for="old_password" class="form-label">Old Password</label>
+    <input type="password" id="old_password" name="old_password" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label for="new_password" class="form-label">New Password</label>
+    <input type="password" id="new_password" name="new_password" class="form-control" required>
+  </div>
+  <div class="mb-3">
+    <label for="confirm_password" class="form-label">Confirm New Password</label>
+    <input type="password" id="confirm_password" name="confirm_password" class="form-control" required>
+  </div>
+  <button type="submit" class="btn btn-warning">Change Password</button>
+</form>
+
+{% endblock %}

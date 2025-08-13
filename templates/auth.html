@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ 'Login' if action == 'login' else 'Register' }}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+      const roleSelect = document.getElementById('role');
+      const buildingContainer = document.getElementById('building-container');
+
+      roleSelect.addEventListener('change', function() {
+        const selected = this.value;
+        if (selected === 'Personel' || selected === 'Şube Müdürü') {
+          buildingContainer.style.display = 'block';
+        } else {
+          buildingContainer.style.display = 'none';
+          document.getElementById('sube').selectedIndex = 0;
+        }
+      });
+    });
+    document.addEventListener('DOMContentLoaded', function () {
+    const password = document.querySelector('input[name="password"]');
+    const confirmPassword = document.querySelector('input[name="confirm_password"]');
+
+    function validatePasswords() {
+        if (password && confirmPassword) {
+            if (password.value === confirmPassword.value) {
+                confirmPassword.setCustomValidity(''); // Valid
+            } else {
+                confirmPassword.setCustomValidity('Passwords do not match'); // Invalid
+            }
+        }
+    }
+
+    if (password && confirmPassword) {
+        password.addEventListener('input', validatePasswords);
+        confirmPassword.addEventListener('input', validatePasswords);
+    }
+});
+</script>
+</head>
+<body class="bg-light" style="
+    background-image: url('{{ url_for('static', filename='auth_background.png') }}');
+    background-size: cover;       /* Ensures the image covers the entire area */
+    background-repeat: no-repeat; /* Prevents tiling */
+    background-position: center center; /* Centers the image horizontally and vertically */
+    height: 90vh;                /* Sets the height to the full viewport */
+    margin: 0;
+">
+    <div class="container mt-5">
+        <div class="row justify-content-end">
+            <div class="col-md-5">
+                <div class="card shadow-sm">
+                    <div class="card-header text-center bg-primary text-white">
+                        <h2>{{ 'Login' if action == 'login' else 'Register' }}</h2>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST">
+                            <div class="mb-2">
+                                <label for="email" class="form-label">Email</label>
+                                <input type="email" id="email" name="email" class="form-control" required>
+                            </div>
+                            <div class="mb-2">
+                                <label for="password" class="form-label">Şifreniz</label>
+                                <input type="password" id="password" name="password" class="form-control" required>
+                            </div>
+                            {% if action == 'register' %}
+                                <div class="mb-2">
+                                    <label for="confirm_password" class="form-label">Şifrenizi Onaylayınız</label>
+                                    <input type="password" id="confirm_password" name="confirm_password" class="form-control" required>
+                                </div>
+                                <div class="mb-2">
+                                    <label for="name" class="form-label">Ad</label>
+                                    <input type="text" id="name" name="name" class="form-control" required>
+                                </div>
+                                <div class="mb-2">
+                                    <label for="surname" class="form-label">Soyad</label>
+                                    <input type="text" id="surname" name="surname" class="form-control" required>
+                                </div>
+                                <div class="mb-2">
+                                    <label for="role" class="form-label">Meslek</label>
+                                    <select id="role" name="role" class="form-select" required>
+                                        <option value="" disabled selected>Hiç</option>
+                                        <option value="Personel">Personel</option>
+                                        <option value="Şube Müdürü">Şube Müdürü</option>
+                                    </select>
+                                    <div class="mb-2" id="building-container" style="display: none;">
+                                    <label for="sube" class="form-label">Şube NO</label>
+                                        <select id="sube" name="sube" class="form-select">
+                                        <option value="" disabled selected>Şubenizi Seçiniz</option>
+                                        <option value="31">31</option>
+                                        <option value="32">32</option>
+                                        <option value="33">33</option>
+                                        <option value="34">34</option>
+                                    </select>
+                                    </div>
+                                </div>
+                            {% endif %}
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">{{ 'Giriş Yap' if action == 'login' else 'Kaydol' }}</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card-footer text-center">
+                        {% if action == 'login' %}
+                            <p>Hesabınız Yok mu? <a href="{{ url_for('auth', action='register') }}">Kaydol</a></p>
+                        {% else %}
+                            <p>Hesabınız Var mı? <a href="{{ url_for('auth', action='login') }}">Giriş Yap</a></p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% with messages = get_flashed_messages() %}
+                    {% if messages %}
+                        <div class="alert alert-info mt-3">
+                            <ul class="mb-0">
+                                {% for msg in messages %}
+                                    <li>{{ msg }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+                {% endwith %}
+            </div>
+        </div>
+    </div>
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

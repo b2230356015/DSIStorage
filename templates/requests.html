@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Requests</h1>
+<hr>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+{% if current_user.role in ['Personel', 'Şube Müdürü'] %}
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>{{ 'Şube İstekleri' if view_type == 'sube' else 'Kendi İsteklerim' }}</h2>
+    {% if current_user.role == 'Şube Müdürü' %}
+      <div>
+        <a href="{{ url_for('requests_page', view='sube') }}" class="btn btn-secondary">Sube Requests</a>
+        <a href="{{ url_for('requests_page', view='own') }}" class="btn btn-secondary">My Requests</a>
+      </div>
+    {% endif %}
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#requestItemModal">Request Item</button>
+  </div>
+{% endif %}
+
+<table class="table table-striped">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Requester</th>
+      <th>Item Name</th>
+      <th>Reason</th>
+      <th>Status</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for request in requests %}
+      <tr>
+        <td>{{ request.id }}</td>
+        <td>{{ request.name }} {{ request.surname }}</td>
+        <td>{{ request.item_name }}</td>
+        <td>{{ request.reason }}</td>
+        <td>{{ request.status }}</td>
+        <td>
+          {% if (current_user.role == 'Şube Müdürü' or current_user.role == 'admin') and request.status == 'pending_manager' %}
+            <form action="{{ url_for('approve_request', request_id=request.id, approver_type='manager') }}" method="POST" style="display:inline;">
+              <button type="submit" class="btn btn-sm btn-success">Approve</button>
+            </form>
+            <form action="{{ url_for('reject_request', request_id=request.id, approver_type='manager') }}" method="POST" style="display:inline;">
+              <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+            </form>
+          {% elif (current_user.role == 'Bilgi Müdür' or current_user.role == 'admin') and request.status == 'pending_it' %}
+            <form action="{{ url_for('approve_request', request_id=request.id, approver_type='it') }}" method="POST" style="display:inline;">
+              <button type="submit" class="btn btn-sm btn-success">Approve</button>
+            </form>
+            <form action="{{ url_for('reject_request', request_id=request.id, approver_type='it') }}" method="POST" style="display:inline;">
+              <button type="submit" class="btn btn-sm btn-danger">Reject</button>
+            </form>
+          {% endif %}
+        </td>
+      </tr>
+    {% else %}
+      <tr>
+        <td colspan="6" class="text-center">No requests found.</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% if current_user.role in ['Personel', 'Şube Müdürü', 'admin'] %}
+  <!-- Request Item Modal -->
+  <div class="modal fade" id="requestItemModal" tabindex="-1" aria-labelledby="requestItemModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="requestItemModalLabel">Request Item</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form action="{{ url_for('request_item') }}" method="POST">
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="itemName" class="form-label">Item Name</label>
+              <select class="form-select" id="itemName" name="item_name" required>
+                <option value="" disabled selected>Select Item</option>
+                <option value="Monitör">Monitör</option>
+                <option value="Klavye">Klavye</option>
+                <option value="Fare">Fare</option>
+                <option value="Telefon">Telefon</option>
+                <option value="Yazıcı">Yazıcı</option>
+                <option value="Bilgisayar">Bilgisayar</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="reason" class="form-label">Reason</label>
+              <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <button type="submit" class="btn btn-primary">Submit Request</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}
