@@ -1,110 +1,243 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>Requests</h1>
-<hr>
+	<h1>İstekler</h1>
+	<hr>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-  {% if messages %}
-    {% for category, message in messages %}
-      <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
-    {% endfor %}
-  {% endif %}
-{% endwith %}
+	{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+			{% for category, message in messages %}
+				<div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
 
-{% if current_user.role in ['Personel', 'Şube Müdürü'] %}
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h2>{{ 'Şube İstekleri' if view_type == 'sube' else 'Kendi İsteklerim' }}</h2>
-    {% if current_user.role == 'Şube Müdürü' %}
-      <div>
-        <a href="{{ url_for('requests_page', view='sube') }}" class="btn btn-secondary">Sube Requests</a>
-        <a href="{{ url_for('requests_page', view='own') }}" class="btn btn-secondary">My Requests</a>
-      </div>
-    {% endif %}
-    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#requestItemModal">Request Item</button>
-  </div>
-{% endif %}
+	{% if current_user.role == 'Bilgi Müdür' %}
+		<div class="mb-3">
+			<label for="sube_id" class="form-label">Filter by Şube</label>
+			<select id="sube_id" name="sube_id" class="form-select" onchange="filterBySube()">
+				<option value="">-- Bütün Şubeler --</option>
+				{% for sube in sube_list %}
+					<option value="{{ sube.id }}" {% if selected_sube_id == sube.id|string %}selected{% endif %}>
+						{{ sube.name }}
+					</option>
+				{% endfor %}
+			</select>
+		</div>
+		<div class="mb-3">
+			<label for="person_id" class="form-label">Filter by Person</label>
+			<select id="person_id" name="person_id" class="form-select" onchange="filterByPerson()">
+				<option value="">-- Bütün Personeller --</option>
+				{% for person in personnel %}
+					<option value="{{ person.id }}" {% if selected_person_id == person.id|string %}selected{% endif %}>
+						{{ person.name }} {{ person.surname }}
+					</option>
+				{% endfor %}
+			</select>
+		</div>
+		<script>
+            function filterBySube() {
+                const subeId = document.getElementById('sube_id').value;
+                const url = new URL(window.location.href);
+                if (subeId) {
+                    url.searchParams.set('sube_id', subeId);
+                } else {
+                    url.searchParams.delete('sube_id');
+                }
+                url.searchParams.delete('person_id'); // Reset person filter when Şube changes
+                window.location.href = url.toString();
+            }
 
-<table class="table table-striped">
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>Requester</th>
-      <th>Item Name</th>
-      <th>Reason</th>
-      <th>Status</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for request in requests %}
-      <tr>
-        <td>{{ request.id }}</td>
-        <td>{{ request.name }} {{ request.surname }}</td>
-        <td>{{ request.item_name }}</td>
-        <td>{{ request.reason }}</td>
-        <td>{{ request.status }}</td>
-        <td>
-          {% if (current_user.role == 'Şube Müdürü' or current_user.role == 'admin') and request.status == 'pending_manager' %}
-            <form action="{{ url_for('approve_request', request_id=request.id, approver_type='manager') }}" method="POST" style="display:inline;">
-              <button type="submit" class="btn btn-sm btn-success">Approve</button>
-            </form>
-            <form action="{{ url_for('reject_request', request_id=request.id, approver_type='manager') }}" method="POST" style="display:inline;">
-              <button type="submit" class="btn btn-sm btn-danger">Reject</button>
-            </form>
-          {% elif (current_user.role == 'Bilgi Müdür' or current_user.role == 'admin') and request.status == 'pending_it' %}
-            <form action="{{ url_for('approve_request', request_id=request.id, approver_type='it') }}" method="POST" style="display:inline;">
-              <button type="submit" class="btn btn-sm btn-success">Approve</button>
-            </form>
-            <form action="{{ url_for('reject_request', request_id=request.id, approver_type='it') }}" method="POST" style="display:inline;">
-              <button type="submit" class="btn btn-sm btn-danger">Reject</button>
-            </form>
-          {% endif %}
-        </td>
-      </tr>
-    {% else %}
-      <tr>
-        <td colspan="6" class="text-center">No requests found.</td>
-      </tr>
-    {% endfor %}
-  </tbody>
-</table>
+            function filterByPerson() {
+                const personId = document.getElementById('person_id').value;
+                const url = new URL(window.location.href);
+                if (personId) {
+                    url.searchParams.set('person_id', personId);
+                } else {
+                    url.searchParams.delete('person_id');
+                }
+                window.location.href = url.toString();
+            }
+		</script>
+	{% endif %}
 
-{% if current_user.role in ['Personel', 'Şube Müdürü', 'admin'] %}
-  <!-- Request Item Modal -->
-  <div class="modal fade" id="requestItemModal" tabindex="-1" aria-labelledby="requestItemModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h5 class="modal-title" id="requestItemModalLabel">Request Item</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <form action="{{ url_for('request_item') }}" method="POST">
-          <div class="modal-body">
-            <div class="mb-3">
-              <label for="itemName" class="form-label">Item Name</label>
-              <select class="form-select" id="itemName" name="item_name" required>
-                <option value="" disabled selected>Select Item</option>
-                <option value="Monitör">Monitör</option>
-                <option value="Klavye">Klavye</option>
-                <option value="Fare">Fare</option>
-                <option value="Telefon">Telefon</option>
-                <option value="Yazıcı">Yazıcı</option>
-                <option value="Bilgisayar">Bilgisayar</option>
-              </select>
-            </div>
-            <div class="mb-3">
-              <label for="reason" class="form-label">Reason</label>
-              <textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            <button type="submit" class="btn btn-primary">Submit Request</button>
-          </div>
-        </form>
-      </div>
-    </div>
-  </div>
-{% endif %}
+	{% if current_user.role == 'Şube Müdürü' %}
+		<div class="mb-3">
+			<label for="person_id" class="form-label">Filter by Person</label>
+			<select id="person_id" name="person_id" class="form-select" onchange="filterByPerson()">
+				<option value="">-- All Personnel --</option>
+				{% for person in personnel %}
+					<option value="{{ person.id }}" {% if selected_person_id == person.id|string %}selected{% endif %}>
+						{{ person.name }} {{ person.surname }}
+					</option>
+				{% endfor %}
+			</select>
+		</div>
+		<script>
+            function filterByPerson() {
+                const personId = document.getElementById('person_id').value;
+                const url = new URL(window.location.href);
+                if (personId) {
+                    url.searchParams.set('person_id', personId);
+                } else {
+                    url.searchParams.delete('person_id');
+                }
+                window.location.href = url.toString();
+            }
+		</script>
+	{% endif %}
+
+	{% if current_user.role in ['Personel', 'Şube Müdürü'] %}
+		<div class="d-flex justify-content-between align-items-center mb-3">
+			{% if current_user.role == 'Personel' %}
+				<h2>Benim İsteklerim</h2>
+			{% else %}
+				<h2>Şube İstekleri</h2>
+			{% endif %}
+			<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#requestItemModal">Request Item
+			</button>
+		</div>
+	{% endif %}
+
+	<table class="table table-striped">
+		<thead>
+		<tr>
+			<th>
+				ID
+				<button class="sort-button" onclick="sortTable('id')">⇅</button>
+			</th>
+			{% if current_user.role == 'Bilgi Müdür' %}
+				<th>
+					Şube
+					<button class="sort-button" onclick="sortTable('sube')">⇅</button>
+				</th>
+			{% endif %}
+			<th>
+				Requester
+				<button class="sort-button" onclick="sortTable('name')">⇅</button>
+			</th>
+			<th>
+				Item Name
+				<button class="sort-button" onclick="sortTable('item_name')">⇅</button>
+			</th>
+			<th>
+				Reason
+			</th>
+			<th>
+				Status
+				<button class="sort-button" onclick="sortTable('status')">⇅</button>
+			</th>
+			<th>Actions</th>
+		</tr>
+		</thead>
+		<tbody>
+		{% for request in requests %}
+			<tr>
+				<td>{{ request.id }}</td>
+				{% if current_user.role == 'Bilgi Müdür' %}
+					<th>{{ request.sube }}</th>
+				{% endif %}
+				<td>{{ request.name }} {{ request.surname }}</td>
+				<td>{{ request.item_name }}</td>
+				<td>{{ request.reason }}</td>
+				<td>{{ request.status }}</td>
+				<td>
+					{% if (current_user.role == 'Şube Müdürü' or current_user.role == 'admin') and request.status == 'pending_manager' %}
+						<form action="{{ url_for('approve_request', request_id=request.id, approver_type='manager') }}"
+						      method="POST" style="display:inline;">
+							<button type="submit" class="btn btn-sm btn-success">Approve</button>
+						</form>
+						<form action="{{ url_for('reject_request', request_id=request.id, approver_type='manager') }}"
+						      method="POST" style="display:inline;">
+							<button type="submit" class="btn btn-sm btn-danger">Reject</button>
+						</form>
+					{% elif (current_user.role == 'Bilgi Müdür' or current_user.role == 'admin') and request.status == 'pending_it' %}
+						<form action="{{ url_for('approve_request', request_id=request.id, approver_type='it') }}"
+						      method="POST" style="display:inline;">
+							<button type="submit" class="btn btn-sm btn-success">Approve</button>
+						</form>
+						<form action="{{ url_for('reject_request', request_id=request.id, approver_type='it') }}"
+						      method="POST" style="display:inline;">
+							<button type="submit" class="btn btn-sm btn-danger">Reject</button>
+						</form>
+					{% endif %}
+				</td>
+			</tr>
+		{% else %}
+			<tr>
+				<td colspan="7" class="text-center">No requests found.</td>
+			</tr>
+		{% endfor %}
+		</tbody>
+	</table>
+
+	<script>
+        function sortTable(column) {
+            const url = new URL(window.location.href);
+            const currentSortBy = url.searchParams.get('sort_by');
+            const currentSortOrder = url.searchParams.get('sort_order') || 'asc';
+
+            if (currentSortBy === column) {
+                url.searchParams.set('sort_order', currentSortOrder === 'asc' ? 'desc' : 'asc');
+            } else {
+                url.searchParams.set('sort_by', column);
+                url.searchParams.set('sort_order', 'asc');
+            }
+
+            window.location.href = url.toString();
+        }
+	</script>
+
+	<style>
+        .sort-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-left: 5px;
+            padding: 0;
+        }
+
+        .sort-button:hover {
+            color: #007bff;
+        }
+	</style>
+
+	{% if current_user.role in ['Personel', 'Şube Müdürü', 'admin'] %}
+		<div class="modal fade" id="requestItemModal" tabindex="-1" aria-labelledby="requestItemModalLabel"
+		     aria-hidden="true">
+			<div class="modal-dialog">
+				<div class="modal-content">
+					<div class="modal-header">
+						<h5 class="modal-title" id="requestItemModalLabel">Request Item</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<form action="{{ url_for('request_item') }}" method="POST">
+						<div class="modal-body">
+							<div class="mb-3">
+								<label for="itemName" class="form-label">Item Name</label>
+								<select class="form-select" id="itemName" name="item_name" required>
+									<option value="" disabled selected>Select Item</option>
+									<option value="Bilgisayar">Bilgisayar</option>
+									<option value="Fare">Fare</option>
+									<option value="Klavye">Klavye</option>
+									<option value="Monitör">Monitör</option>
+									<option value="Telefon">Telefon</option>
+									<option value="Yazıcı">Yazıcı</option>
+								</select>
+							</div>
+							<div class="mb-3">
+								<label for="reason" class="form-label">Reason</label>
+								<textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
+							</div>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+							<button type="submit" class="btn btn-primary">Submit Request</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+	{% endif %}
 {% endblock %}

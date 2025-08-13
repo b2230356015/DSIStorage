@@ -238,8 +238,6 @@ def approve_request(request_id, approver_type):
 					pass
 
 	db.commit()
-	if current_user.role == 'Şube Müdürü':
-		return redirect(url_for('requests_page', view='sube'))
 	return redirect(url_for('requests_page'))
 
 
@@ -318,63 +316,123 @@ def dashboard():
 @app.route("/requests")
 @login_required
 def requests_page():
-    view_type = request.args.get('view', 'own')  # Default to viewing own requests
-    requests = []  # Initialize requests as an empty list
+    person_id = request.args.get('person_id')  # Get person_id from query parameters
+    sube_id = request.args.get('sube_id')  # Get sube_id from query parameters
+    sort_by = request.args.get('sort_by', 'status')  # Default sorting by status
+    sort_order = request.args.get('sort_order', 'asc')  # Default sorting order
 
-    if current_user.role == 'Personel':
-        # Show personal requests
+    # Validate sort_by and sort_order to prevent SQL injection
+    valid_columns = ['id', 'name', 'surname', 'item_name', 'sube', 'status']
+    if sort_by not in valid_columns:
+        sort_by = 'status'
+    if sort_order not in ['asc', 'desc']:
+        sort_order = 'asc'
+
+    # Handle sorting by name and surname together
+    if sort_by == 'name':
+        order_clause = f"name {sort_order}, surname {sort_order}"
+    else:
+        order_clause = f"{sort_by} {sort_order}"
+
+    requests = []  # Initialize requests as an empty list
+    personnel = []  # Initialize personnel as an empty list
+    sube_list = []  # Initialize sube_list as an empty list
+
+    if current_user.role == 'Bilgi Müdür':
+        # Fetch all Şube list
+        cursor.execute("SELECT DISTINCT sube AS id, CONCAT('Şube ', sube) AS name FROM users WHERE sube IS NOT NULL")
+        sube_list = cursor.fetchall()
+
+        if sube_id:
+            # Fetch personnel in the selected Şube
+            cursor.execute("""
+                SELECT id, name, surname
+                FROM users
+                WHERE sube = %s AND role = 'Personel'
+                ORDER BY name, surname
+            """, (sube_id,))
+            personnel = cursor.fetchall()
+
+            if person_id:
+                # Show requests for a specific person in the selected Şube
+                cursor.execute(f"""
+                    SELECT r.*, u.name, u.surname
+                    FROM requests r
+                    JOIN users u ON r.requester_id = u.id
+                    WHERE r.sube = %s AND r.requester_id = %s
+                    ORDER BY {order_clause}
+                """, (sube_id, person_id))
+            else:
+                # Show all requests for the selected Şube
+                cursor.execute(f"""
+                    SELECT r.*, u.name, u.surname
+                    FROM requests r
+                    JOIN users u ON r.requester_id = u.id
+                    WHERE r.sube = %s
+                    ORDER BY {order_clause}
+                """, (sube_id,))
+        else:
+            # Show all requests across all Şubeler
+            cursor.execute(f"""
+                SELECT r.*, u.name, u.surname
+                FROM requests r
+                JOIN users u ON r.requester_id = u.id
+                ORDER BY {order_clause}
+            """)
+        requests = cursor.fetchall()
+
+    elif current_user.role == 'Şube Müdürü':
+        # Fetch personnel in the same branch (Şube)
         cursor.execute("""
+            SELECT id, name, surname
+            FROM users
+            WHERE sube = %s AND role = 'Personel'
+            ORDER BY name, surname
+        """, (current_user.sube,))
+        personnel = cursor.fetchall()
+
+        if person_id:
+            # Show requests for a specific person in the Şube
+            cursor.execute(f"""
+                SELECT r.*, u.name, u.surname
+                FROM requests r
+                JOIN users u ON r.requester_id = u.id
+                WHERE r.sube = %s AND r.requester_id = %s
+                ORDER BY {order_clause}
+            """, (current_user.sube, person_id))
+        else:
+            # Show all requests for the Şube
+            cursor.execute(f"""
+                SELECT r.*, u.name, u.surname
+                FROM requests r
+                JOIN users u ON r.requester_id = u.id
+                WHERE r.sube = %s
+                ORDER BY {order_clause}
+            """, (current_user.sube,))
+        requests = cursor.fetchall()
+
+    elif current_user.role == 'Personel':
+        # Fetch requests made by the logged-in personnel
+        cursor.execute(f"""
             SELECT r.*, u.name, u.surname
             FROM requests r
             JOIN users u ON r.requester_id = u.id
             WHERE r.requester_id = %s
-            ORDER BY r.created_at DESC
+            ORDER BY {order_clause}
         """, (current_user.id,))
         requests = cursor.fetchall()
 
-    elif current_user.role == 'Şube Müdürü':
-        if view_type == 'own':
-            # Show Şube Müdürü's own requests
-            cursor.execute("""
-                SELECT r.*, u.name, u.surname
-                FROM requests r
-                JOIN users u ON r.requester_id = u.id
-                WHERE r.requester_id = %s AND r.status = 'pending_manager'
-                ORDER BY r.created_at DESC
-            """, (current_user.id,))
-        elif view_type == 'sube':
-            # Show requests from the same sube with status 'pending_manager'
-            cursor.execute("""
-                SELECT r.*, u.name, u.surname
-                FROM requests r
-                JOIN users u ON r.requester_id = u.id
-                WHERE r.sube = %s AND r.status IN ('pending_manager', 'pending_it')
-                ORDER BY r.created_at DESC
-            """, (current_user.sube,))
-        requests = cursor.fetchall()
-
-    elif current_user.role == 'Bilgi Müdür':
-        # Show all manager-approved requests
-        cursor.execute("""
-            SELECT r.*, u.name, u.surname
-            FROM requests r
-            JOIN users u ON r.requester_id = u.id
-            WHERE r.status = 'pending_it'
-            ORDER BY r.created_at DESC
-        """)
-        requests = cursor.fetchall()
-
-    elif current_user.role == 'admin':
-        # Admin can view all requests
-        cursor.execute("""
-            SELECT r.*, u.name, u.surname
-            FROM requests r
-            JOIN users u ON r.requester_id = u.id
-            ORDER BY r.created_at DESC
-        """)
-        requests = cursor.fetchall()
-
-    return render_template('requests.html', title='Requests', requests=requests, view_type=view_type)
+    return render_template(
+        'requests.html',
+        title='Requests',
+        requests=requests,
+        personnel=personnel,  # Pass personnel to the template
+        sube_list=sube_list,  # Pass Şube list to the template
+        sort_by=sort_by,
+        sort_order=sort_order,
+        selected_person_id=person_id,  # Pass the selected person ID to the template
+        selected_sube_id=sube_id  # Pass the selected Şube ID to the template
+    )
 
 @app.route("/reports")
 @login_required
