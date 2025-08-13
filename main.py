@@ -2,6 +2,9 @@ from flask import abort, Flask, render_template, request, redirect, url_for, ses
 import mysql.connector
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, login_user, login_required, logout_user, UserMixin, current_user
+from dotenv import load_dotenv
+import os
+import mysql.connector
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
@@ -11,13 +14,16 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = ('auth')
 
+# Load environment variables from .env file
+load_dotenv()
+
 # Database setup
 try:
 	db = mysql.connector.connect(
-		host="127.0.0.1",
-		user="root",
-		password="123456789",
-		database="my_database",
+		host=os.getenv("DB_HOST"),
+		user=os.getenv("DB_USER"),
+		password=os.getenv("DB_PASSWORD"),
+		database=os.getenv("DB_NAME"),
 		autocommit=True
 	)
 	cursor = db.cursor(dictionary=True)
