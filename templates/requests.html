@@ -14,7 +14,7 @@
 
 	{% if current_user.role == 'Bilgi Müdür' %}
 		<div class="mb-3">
-			<label for="sube_id" class="form-label">Filter by Şube</label>
+			<label for="sube_id" class="form-label">Şube Seçiniz</label>
 			<select id="sube_id" name="sube_id" class="form-select" onchange="filterBySube()">
 				<option value="">-- Bütün Şubeler --</option>
 				{% for sube in sube_list %}
@@ -25,7 +25,7 @@
 			</select>
 		</div>
 		<div class="mb-3">
-			<label for="person_id" class="form-label">Filter by Person</label>
+			<label for="person_id" class="form-label">Personel Seçiniz</label>
 			<select id="person_id" name="person_id" class="form-select" onchange="filterByPerson()">
 				<option value="">-- Bütün Personeller --</option>
 				{% for person in personnel %}
@@ -65,7 +65,7 @@
 		<div class="mb-3">
 			<label for="person_id" class="form-label">Filter by Person</label>
 			<select id="person_id" name="person_id" class="form-select" onchange="filterByPerson()">
-				<option value="">-- All Personnel --</option>
+				<option value="">-- Bütün Personeller --</option>
 				{% for person in personnel %}
 					<option value="{{ person.id }}" {% if selected_person_id == person.id|string %}selected{% endif %}>
 						{{ person.name }} {{ person.surname }}
@@ -113,21 +113,25 @@
 				</th>
 			{% endif %}
 			<th>
-				Requester
+				İsteyen
 				<button class="sort-button" onclick="sortTable('name')">⇅</button>
 			</th>
 			<th>
-				Item Name
+				Eşya
 				<button class="sort-button" onclick="sortTable('item_name')">⇅</button>
 			</th>
 			<th>
-				Reason
+				Sebep
 			</th>
 			<th>
-				Status
+				Durum
 				<button class="sort-button" onclick="sortTable('status')">⇅</button>
 			</th>
-			<th>Actions</th>
+			{% if current_user.role in ['Şube Müdürü', 'Bilgi Müdür', 'admin'] %}
+				<th>
+					İşlemler
+				</th>
+			{% endif %}
 		</tr>
 		</thead>
 		<tbody>

@@ -1,71 +1,71 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Transfer Items</h1>
-<hr>
+	<h1>Eşya Depola</h1>
+	<hr>
 
-{% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-        {% for category, message in messages %}
-            <div class="alert alert-{{ category }} mt-3">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-{% endwith %}
+	{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+			{% for category, message in messages %}
+				<div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
 
-<!-- Select Şube -->
-<div class="mb-3">
-    <label for="sube_id" class="form-label">Select Şube</label>
-    <select id="sube_id" name="sube_id" class="form-select" required>
-        <option value="" disabled selected hidden>-- Choose a Branch --</option>
-        {% for sube in sube_list %}
-            <option value="{{ sube.id }}">{{ sube.name }}</option>
-        {% endfor %}
-    </select>
-</div>
+	<!-- Select Şube -->
+	<div class="mb-3">
+		<label for="sube_id" class="form-label">Şube</label>
+		<select id="sube_id" name="sube_id" class="form-select" required>
+			<option value="" disabled selected hidden>-- Şube Seçiniz --</option>
+			{% for sube in sube_list %}
+				<option value="{{ sube.id }}">{{ sube.name }}</option>
+			{% endfor %}
+		</select>
+	</div>
 
-<!-- Select Personnel -->
-<div class="mb-3">
-    <label for="personel_id" class="form-label">Select Personnel</label>
-    <select id="personel_id" name="personel_id" class="form-select" required>
-        <option value="" disabled selected hidden>-- Choose a Person --</option>
-    </select>
-</div>
+	<!-- Select Personnel -->
+	<div class="mb-3">
+		<label for="personel_id" class="form-label">Personel</label>
+		<select id="personel_id" name="personel_id" class="form-select" required>
+			<option value="" disabled selected hidden>-- Personel Seçiniz --</option>
+		</select>
+	</div>
 
-<!-- Items Table -->
-<div id="items_container" class="mt-4"></div>
+	<!-- Items Table -->
+	<div id="items_container" class="mt-4"></div>
 
-<script>
-    const allPersonnel = {{ persons_list | tojson }};
-    const allItems = {{ personnel_items | tojson }};
-    const subeSelect = document.getElementById('sube_id');
-    const personelSelect = document.getElementById('personel_id');
-    const itemsContainer = document.getElementById('items_container');
+	<script>
+        const allPersonnel = {{ persons_list | tojson }};
+        const allItems = {{ personnel_items | tojson }};
+        const subeSelect = document.getElementById('sube_id');
+        const personelSelect = document.getElementById('personel_id');
+        const itemsContainer = document.getElementById('items_container');
 
-    // When Şube changes, update personnel dropdown
-    subeSelect.addEventListener('change', function () {
-        const selectedSube = parseInt(this.value);
-        personelSelect.innerHTML = '<option value="" disabled selected hidden>-- Choose a Person --</option>';
+        // When Şube changes, update personnel dropdown
+        subeSelect.addEventListener('change', function () {
+            const selectedSube = this.value;  // zaten string
+            personelSelect.innerHTML = '<option value="" disabled selected hidden>-- Choose a Person --</option>';
 
-        const filteredPersons = allPersonnel.filter(p => p.sube_id === selectedSube);
-        filteredPersons.forEach(person => {
-            personelSelect.innerHTML += `<option value="${person.personel_id}">${person.name} ${person.surname}</option>`;
+            const filteredPersons = allPersonnel.filter(p => String(p.sube_id) === selectedSube);
+            filteredPersons.forEach(person => {
+                personelSelect.innerHTML += `<option value="${person.personel_id}">${person.name} ${person.surname}</option>`;
+            });
+
+            itemsContainer.innerHTML = '';
         });
 
-        itemsContainer.innerHTML = '';
-    });
+        // When Personnel changes, show items
+        personelSelect.addEventListener('change', function () {
+            const selectedId = parseInt(this.value);
+            itemsContainer.innerHTML = '';
 
-    // When Personnel changes, show items
-    personelSelect.addEventListener('change', function () {
-        const selectedId = parseInt(this.value);
-        itemsContainer.innerHTML = '';
+            const filteredItems = allItems.filter(item => item.personel_id === selectedId && item.item_name);
 
-        const filteredItems = allItems.filter(item => item.personel_id === selectedId && item.item_name);
+            if (filteredItems.length === 0) {
+                itemsContainer.innerHTML = '<p class="text-muted">No items found for this person.</p>';
+                return;
+            }
 
-        if (filteredItems.length === 0) {
-            itemsContainer.innerHTML = '<p class="text-muted">No items found for this person.</p>';
-            return;
-        }
-
-        let tableHTML = `
+            let tableHTML = `
         <table class="table table-bordered table-striped align-middle">
             <thead class="table-dark">
                 <tr>
@@ -76,8 +76,8 @@
             <tbody>
         `;
 
-        filteredItems.forEach(item => {
-            tableHTML += `
+            filteredItems.forEach(item => {
+                tableHTML += `
             <tr>
                 <td>${item.item_name}</td>
                 <td>
@@ -89,10 +89,10 @@
                 </td>
             </tr>
         `;
-        });
+            });
 
-        tableHTML += `</tbody></table>`;
-        itemsContainer.innerHTML = tableHTML;
-    });
-</script>
+            tableHTML += `</tbody></table>`;
+            itemsContainer.innerHTML = tableHTML;
+        });
+	</script>
 {% endblock %}

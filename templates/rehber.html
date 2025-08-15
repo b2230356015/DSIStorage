@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block content %}
+	<h1>Rehber</h1>
+	<hr>
+	<form method="get" class="mb-3">
+		<div class="row">
+			<div class="col-md-4">
+				<label for="sube_id" class="form-label">Şube Seçiniz</label>
+				<select id="sube_id" name="sube_id" class="form-select">
+					<option value="">-- Bütün Şubeler --</option>
+					{% for sube in sube_list %}
+						<option value="{{ sube.id }}" {% if sube.id == selected_sube_id %}selected{% endif %}>
+							{{ sube.name }}
+						</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="col-md-4">
+				<label for="person_id" class="form-label">Personel Seçiniz</label>
+				<select id="person_id" name="person_id" class="form-select">
+					<option value="">-- Bütün Personeller --</option>
+					{% for user in users %}
+						<option value="{{ user.id }}" {% if user.id == selected_person_id %}selected{% endif %}>
+							{{ user.name }} {{ user.surname }}
+						</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="col-md-4 d-flex align-items-end">
+				<button type="submit" class="btn btn-primary ms-auto">Filter</button>
+			</div>
+		</div>
+	</form>
+
+	<table class="table table-striped">
+		<thead>
+		<tr>
+			<th>
+				Dahili
+				<button class="sort-button" onclick="sortTable('id')">⇅</button>
+			</th>
+			<th>
+				Ad
+				<button class="sort-button" onclick="sortTable('name')">⇅</button>
+			</th>
+			<th>
+				Soyad
+				<button class="sort-button" onclick="sortTable('surname')">⇅</button>
+			</th>
+			<th>
+				Email
+				<button class="sort-button" onclick="sortTable('email')">⇅</button>
+			</th>
+			<th>
+				Görev
+				<button class="sort-button" onclick="sortTable('role')">⇅</button>
+			</th>
+			<th>
+				Şube
+				<button class="sort-button" onclick="sortTable('sube')">⇅</button>
+			</th>
+		</tr>
+		</thead>
+		<tbody>
+		{% for user in users %}
+			<tr>
+				<td>{{ user.id + 1000 }}</td>
+				<td>{{ user.name }}</td>
+				<td>{{ user.surname }}</td>
+				<td>{{ user.email }}</td>
+				{% if user.role == 'Bilgi Müdür' %}
+					<td>{{ 'Şube Müdürü' }}</td>
+				{% else %}
+					<td>{{ user.role }}</td>
+				{% endif %}
+				<td>{{ user.sube }}</td>
+			</tr>
+		{% endfor %}
+		</tbody>
+	</table>
+
+	<script>
+        function sortTable(column) {
+            const url = new URL(window.location.href); // Create a URL object from the current location
+            const currentSortBy = url.searchParams.get('sort_by');
+            const currentSortOrder = url.searchParams.get('sort_order') || 'asc';
+
+            if (currentSortBy === column) {
+                url.searchParams.set('sort_order', currentSortOrder === 'asc' ? 'desc' : 'asc');
+            } else {
+                url.searchParams.set('sort_by', column);
+                url.searchParams.set('sort_order', 'asc');
+            }
+
+            window.location.href = url.toString(); // Redirect to the updated URL
+        }
+	</script>
+
+	<style>
+        .sort-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-left: 5px;
+            padding: 0;
+        }
+
+        .sort-button:hover {
+            color: #007bff;
+        }
+	</style>
+{% endblock %}

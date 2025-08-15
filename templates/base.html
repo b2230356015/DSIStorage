@@ -50,18 +50,18 @@
 <div class="sidebar">
 	<h4 class="text-center">DSİ Depo</h4>
 	{% if current_user.role in ['admin', 'Personel', 'Şube Müdürü'] %}
-		<a href="{{ url_for('dashboard') }}">My Items</a>
+		<a href="{{ url_for('dashboard') }}">Zimmetimdeki Eşyalar</a>
 	{% endif %}
 	{% if current_user.role in ['admin', 'Bilgi Müdür'] %}
-		<a href="{{ url_for('inventory') }}">Inventory</a>
+		<a href="{{ url_for('inventory') }}">Envanter</a>
 	{% endif %}
-	<a href="{{ url_for('requests_page') }}">Requests</a>
+	<a href="{{ url_for('requests_page') }}">Zimmet İstekleri</a>
 	{% if current_user.role in ['admin', 'Bilgi Müdür'] %}
-		<a href="{{ url_for('transfer_items') }}">Transfer Items</a>
+		<a href="{{ url_for('transfer_items') }}">Eşya Depolama</a>
 	{% endif %}
-	<!--<a href="{{ url_for('reports') }}">Reports</a> -->
-	<a href="{{ url_for('settings') }}">Settings</a>
-	<a href="{{ url_for('logout') }}">Logout</a>
+	<a href="{{ url_for('rehber') }}">Rehber</a>
+	<a href="{{ url_for('settings') }}">Ayarlar</a>
+	<a href="{{ url_for('logout') }}">Çıkış Yap</a>
 </div>
 
 <!-- Main Content -->

@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>My Items</h1>
+<h1>Eşyalarım</h1>
 <hr>
 
 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -12,13 +12,13 @@
   {% endif %}
 {% endwith %}
 
-<h2>Your Assigned Items</h2>
+<h2>Bana Zimmetli Eşyalar</h2>
 {% if assigned_items %}
   <ul class="list-group mb-4">
     {% for item in assigned_items %}
       <li class="list-group-item d-flex justify-content-between align-items-center">
         {{ item.item_name }}
-        <small class="text-muted">Assigned on {{ item.assigned_at.strftime('%Y-%m-%d %H:%M') }}</small>
+        <small class="text-muted">Zimmet Tarihi: {{ item.assigned_at.strftime('%Y-%m-%d %H:%M') }}</small>
       </li>
     {% endfor %}
   </ul>
