@@ -69,8 +69,8 @@
         <table class="table table-bordered table-striped align-middle">
             <thead class="table-dark">
                 <tr>
-                    <th style="width: 70%">Item Name</th>
-                    <th style="width: 30%">Action</th>
+                    <th style="width: 80%">Eşya Adı</th>
+                    <th style="width: 20%">Depola</th>
                 </tr>
             </thead>
             <tbody>
@@ -84,7 +84,7 @@
                     <form method="POST" action="{{ url_for('transfer_items') }}" class="d-inline">
                         <input type="hidden" name="personel_id" value="${selectedId}">
                         <input type="hidden" name="item_name" value="${item.item_name}">
-                        <button type="submit" class="btn btn-sm btn-primary">Transfer</button>
+                        <button type="submit" class="btn btn-sm btn-primary">Depola</button>
                     </form>
                 </td>
             </tr>

@@ -20,7 +20,8 @@
 				<select id="person_id" name="person_id" class="form-select">
 					<option value="">-- Bütün Personeller --</option>
 					{% for user in users %}
-						<option value="{{ user.id }}" {% if user.id == selected_person_id %}selected{% endif %}>
+						<option value="{{ user.id }}" data-sube="{{ user.sube }}"
+						        {% if user.id == selected_person_id %}selected{% endif %}>
 							{{ user.name }} {{ user.surname }}
 						</option>
 					{% endfor %}
@@ -94,6 +95,28 @@
 
             window.location.href = url.toString(); // Redirect to the updated URL
         }
+	</script>
+
+	<script>
+        const subeSelect = document.getElementById('sube_id');
+        const personelSelect = document.getElementById('person_id');
+
+        // Store the original options in memory
+        const originalPersonelOptions = Array.from(personelSelect.options);
+
+        subeSelect.addEventListener('change', function () {
+            const selectedSube = this.value;
+
+            // Reset the dropdown
+            personelSelect.innerHTML = '<option value="">-- Bütün Personeller --</option>';
+
+            // Filter and append options based on the selected Şube
+            originalPersonelOptions.forEach(option => {
+                if (!selectedSube || option.dataset.sube === selectedSube) {
+                    personelSelect.appendChild(option.cloneNode(true));
+                }
+            });
+        });
 	</script>
 
 	<style>

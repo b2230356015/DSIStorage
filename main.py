@@ -5,6 +5,7 @@ from flask_login import LoginManager, login_user, login_required, logout_user, U
 from dotenv import load_dotenv
 import os
 import mysql.connector
+import re
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key_here'
@@ -85,7 +86,7 @@ def request_item():
 	reason = request.form.get('reason')
 
 	if not all([item_name, reason]):
-		flash('All fields are required')
+		flash('Bütün Alanların Doldurulması Gerekiyor')
 		return redirect(url_for('requests_page'))
 
 	cursor.execute("""
@@ -177,7 +178,7 @@ def approve_request(request_id, approver_type):
 
 
 					else:
-						# Not enough items, maybe raise error or set request status to rejected or pending
+						flash(f'Depoda {item_name} bulunmadı', 'danger')
 						pass
 
 	# Manager approval
@@ -233,8 +234,9 @@ def approve_request(request_id, approver_type):
 					                    WHERE id = %s
 					                """, (request_id,))
 
+
 				else:
-					# Not enough items, maybe raise error or set request status to rejected or pending
+					flash(f'Depoda {item_name} bulunmadı', 'danger')
 					pass
 
 	db.commit()
@@ -294,23 +296,23 @@ def inventory():
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    cursor.execute("""
+	cursor.execute("""
         SELECT item_name, assigned_at
         FROM personel_items
         WHERE personel_id = %s
         ORDER BY item_name ASC
     """, (current_user.id,))
-    assigned_items = cursor.fetchall()
+	assigned_items = cursor.fetchall()
 
-    cursor.execute("""
+	cursor.execute("""
         SELECT COUNT(*) AS total_requests FROM requests WHERE requester_id = %s
     """, (current_user.id,))
-    total_requests = cursor.fetchone()['total_requests']
+	total_requests = cursor.fetchone()['total_requests']
 
-    return render_template('dashboard.html',
-                           title='Dashboard',
-                           assigned_items=assigned_items,
-                           total_requests=total_requests)
+	return render_template('dashboard.html',
+	                       title='Dashboard',
+	                       assigned_items=assigned_items,
+	                       total_requests=total_requests)
 
 
 @app.route("/requests")
@@ -500,7 +502,7 @@ def transfer_items():
 		item_name = request.form.get('item_name')
 
 		if not personel_id or not item_name:
-			flash('Please select a personel and an item.', 'danger')
+			flash('Lütfen Personel ve Eşya seçiniz', 'danger')
 			return redirect(url_for('transfer_items'))
 
 		# Remove the item from the personel
@@ -542,7 +544,8 @@ def transfer_items():
 	persons_list = list(persons.values())
 
 	# Fetch Şube list
-	cursor.execute("SELECT DISTINCT sube AS id, CONCAT('Şube ', sube) AS name FROM users WHERE sube IS NOT NULL order by sube ASC")
+	cursor.execute(
+		"SELECT DISTINCT sube AS id, CONCAT('Şube ', sube) AS name FROM users WHERE sube IS NOT NULL order by sube ASC")
 	sube_list = cursor.fetchall()
 
 	return render_template(
@@ -567,15 +570,15 @@ def settings():
 		if form_type == "update_email":
 			new_email = request.form.get("email", "").strip()
 			if not new_email:
-				flash("Email cannot be empty.", "danger")
+				flash("Email Boş Olamaz", "danger")
 			elif new_email == current_user.email:
-				flash("This is already your current email.", "warning")
+				flash("Lütfen Yeni Bir Email Girin", "warning")
 			else:
 				# Check if email already exists for a different user
 				cursor.execute("SELECT id FROM users WHERE email = %s AND id != %s", (new_email, current_user.id))
 				existing = cursor.fetchone()
 				if existing:
-					flash("This email is already in use by another account.", "danger")
+					flash("Bu Email Başka Bir Hesap Tarafından Kullanılıyor", "danger")
 				else:
 					cursor.execute("UPDATE users SET email = %s WHERE id = %s", (new_email, current_user.id))
 					db.commit()
@@ -589,11 +592,11 @@ def settings():
 			confirm_password = request.form.get("confirm_password", "")
 
 			if not old_password or not new_password or not confirm_password:
-				flash("Please fill in all password fields.", "danger")
+				flash("Lütfen Bütün Alanları Doldurunuz", "danger")
 			elif not bcrypt.check_password_hash(current_user.password_hash, old_password):
-				flash("Old password is incorrect.", "danger")
+				flash("Eski Şifreniz Yanlış", "danger")
 			elif new_password != confirm_password:
-				flash("New password and confirmation do not match.", "danger")
+				flash("Yeni Şifreler Eşleşmiyor", "danger")
 			else:
 				hashed_password = bcrypt.generate_password_hash(new_password).decode('utf-8')
 				cursor.execute("""UPDATE users SET password_hash = %s WHERE id = %s""",
@@ -637,79 +640,85 @@ def settings():
 
 @app.route('/auth', methods=['GET', 'POST'])
 def auth():
-	action = request.args.get('action', 'login')
-	cursor.execute("SELECT DISTINCT sube FROM users WHERE sube IS NOT NULL order by sube ASC")
-	subeler = [row["sube"] for row in cursor.fetchall()]
+    action = request.args.get('action', 'login')
+    cursor.execute("SELECT DISTINCT sube FROM users WHERE sube IS NOT NULL order by sube ASC")
+    subeler = [row["sube"] for row in cursor.fetchall()]
 
-	if request.method == 'POST':
-		email = request.form.get('email')
-		password = request.form.get('password')
+    email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'  # Regex for validating email
 
-		if not email or not password:
-			flash('Email and password are required.')
-			return redirect(url_for('auth', action=action))
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
 
-		if action == 'login':
-			cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-			user = cursor.fetchone()
-			if user and bcrypt.check_password_hash(user['password_hash'], password):
-				user_obj = User(user['id'], user['name'], user['surname'], user['email'], user['role'], user['sube'],
-				                user['password_hash'])
-				login_user(user_obj)
-				if user['role'] == 'Bilgi Müdür':
-					return redirect(url_for('requests_page'))
-				return redirect(url_for('dashboard'))
-			flash('Invalid login credentials')
+        if not email or not password:
+            flash('Email ve Şifre Girmeniz Gerekmektedir')
+            return redirect(url_for('auth', action=action))
 
-		elif action == 'register':
-			name = request.form.get('name')
-			surname = request.form.get('surname')
-			role = request.form.get('role')
-			sube = request.form.get('sube')
-			confirm_password = request.form.get('confirm_password')
+        if not re.match(email_regex, email):  # Validate email format
+            flash('Geçersiz Email Formatı', 'danger')
+            return redirect(url_for('auth', action=action))
 
-			if not all([name, surname, role, password, confirm_password]):
-				flash('All fields are required')
-				return redirect(url_for('auth', action=action))
+        if action == 'login':
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+            if user and bcrypt.check_password_hash(user['password_hash'], password):
+                user_obj = User(user['id'], user['name'], user['surname'], user['email'], user['role'], user['sube'],
+                                user['password_hash'])
+                login_user(user_obj)
+                if user['role'] == 'Bilgi Müdür':
+                    return redirect(url_for('requests_page'))
+                return redirect(url_for('dashboard'))
+            flash('Yanlış Hesap Bilgisi')
 
-			if password != confirm_password:
-				flash('Passwords do not match')
-				return redirect(url_for('auth', action=action))
+        elif action == 'register':
+            name = request.form.get('name')
+            surname = request.form.get('surname')
+            role = request.form.get('role')
+            sube = request.form.get('sube')
+            confirm_password = request.form.get('confirm_password')
 
-			cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-			if cursor.fetchone():
-				flash('Email already registered')
-				return redirect(url_for('auth', action=action))
+            if not all([name, surname, role, password, confirm_password]):
+                flash('Lütfen Bütün Alanları Doldurunuz')
+                return redirect(url_for('auth', action=action))
 
-			sube = sube if role in ['Personel', 'Şube Müdürü'] else None
-			hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+            if password != confirm_password:
+                flash('Şifreler Eşleşmiyor')
+                return redirect(url_for('auth', action=action))
 
-			cursor.execute("""
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            if cursor.fetchone():
+                flash('Email Zaten Kayıtlı')
+                return redirect(url_for('auth', action=action))
+
+            sube = sube if role in ['Personel', 'Şube Müdürü'] else None
+            hashed_password = bcrypt.generate_password_hash(password).decode('utf-8')
+
+            cursor.execute("""
                 INSERT INTO users (email, password_hash, name, surname, role, sube) 
                 VALUES (%s, %s, %s, %s, %s, %s)
             """, (email, hashed_password, name, surname, role, sube))
-			db.commit()
+            db.commit()
 
-			cursor.execute("SELECT * FROM users WHERE id = %s", (cursor.lastrowid,))
-			user = cursor.fetchone()
-			if user:
-				user_obj = User(
-					user['id'], user['name'], user['surname'], user['email'],
-					user['role'], user['sube'], user['password_hash']
-				)
-				login_user(user_obj)
-			if user['role'] == 'Bilgi Müdür':
-				return redirect(url_for('requests_page'))
-			return redirect(url_for("dashboard"))
+            cursor.execute("SELECT * FROM users WHERE id = %s", (cursor.lastrowid,))
+            user = cursor.fetchone()
+            if user:
+                user_obj = User(
+                    user['id'], user['name'], user['surname'], user['email'],
+                    user['role'], user['sube'], user['password_hash']
+                )
+                login_user(user_obj)
+            if user['role'] == 'Bilgi Müdür':
+                return redirect(url_for('requests_page'))
+            return redirect(url_for("dashboard"))
 
-	return render_template('auth.html', action=action, subeler=subeler)
+    return render_template('auth.html', action=action, subeler=subeler)
 
 
 @app.route('/logout')
 @login_required
 def logout():
 	logout_user()
-	flash('You have been logged out.')
+	flash('Çıkış Yaptınız')
 	return redirect(url_for('auth', action='login'))
 
 

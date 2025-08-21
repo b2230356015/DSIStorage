@@ -23,10 +23,10 @@
     {% endfor %}
   </ul>
 {% else %}
-  <p>You have no assigned items yet.</p>
+  <p>Üstünüze zimmetli bir eşya bulunmamaktadır</p>
 {% endif %}
 
-<p>You have made <strong>{{ total_requests }}</strong> requests.</p>
+<p>Toplam <strong>{{ total_requests }}</strong> istekte bulundunuz.</p>
 
-<a href="{{ url_for('requests_page') }}" class="btn btn-primary mt-3">Make a New Request</a>
+<a href="{{ url_for('requests_page') }}" class="btn btn-primary mt-3">Eşya Talebinde Bulun</a>
 {% endblock %}

@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Inventory</h1>
+<h1>Envanter</h1>
 <hr>
 
 <table class="table table-striped">
     <thead>
         <tr>
-            <th>Name</th>
-            <th>Amount</th>
+            <th>Eşya Adı</th>
+            <th>Miktar</th>
         </tr>
     </thead>
     <tbody>
@@ -18,7 +18,7 @@
         </tr>
         {% else %}
         <tr>
-            <td colspan="2" class="text-center text-muted">No items in storage</td>
+            <td colspan="2" class="text-center text-muted">Depoda Eşya Bulunamadı</td>
         </tr>
         {% endfor %}
     </tbody>

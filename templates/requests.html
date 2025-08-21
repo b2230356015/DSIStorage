@@ -44,7 +44,7 @@
                 } else {
                     url.searchParams.delete('sube_id');
                 }
-                url.searchParams.delete('person_id'); // Reset person filter when Şube changes
+                url.searchParams.delete('person_id'); // reset person filter
                 window.location.href = url.toString();
             }
 
@@ -94,7 +94,8 @@
 			{% else %}
 				<h2>Şube İstekleri</h2>
 			{% endif %}
-			<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#requestItemModal">Request Item
+			<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#requestItemModal">
+				Eşya İsteğinde Bulun
 			</button>
 		</div>
 	{% endif %}
@@ -102,35 +103,28 @@
 	<table class="table table-striped">
 		<thead>
 		<tr>
-			<th>
-				ID
+			<th>ID
 				<button class="sort-button" onclick="sortTable('id')">⇅</button>
 			</th>
 			{% if current_user.role == 'Bilgi Müdür' %}
-				<th>
-					Şube
+				<th>Şube
 					<button class="sort-button" onclick="sortTable('sube')">⇅</button>
 				</th>
 			{% endif %}
-			<th>
-				İsteyen
+			<th>İsteyen
 				<button class="sort-button" onclick="sortTable('name')">⇅</button>
 			</th>
-			<th>
-				Eşya
+			<th>Eşya
 				<button class="sort-button" onclick="sortTable('item_name')">⇅</button>
 			</th>
-			<th>
-				Sebep
-			</th>
-			<th>
-				Durum
+			<th>Sebep</th>
+			<th>Durum
 				<button class="sort-button" onclick="sortTable('status')">⇅</button>
 			</th>
+			<th>Şube Müdürü Yorumu</th>
+			<th>BT Yorumu</th>
 			{% if current_user.role in ['Şube Müdürü', 'Bilgi Müdür', 'admin'] %}
-				<th>
-					İşlemler
-				</th>
+				<th>İşlemler</th>
 			{% endif %}
 		</tr>
 		</thead>
@@ -139,37 +133,51 @@
 			<tr>
 				<td>{{ request.id }}</td>
 				{% if current_user.role == 'Bilgi Müdür' %}
-					<th>{{ request.sube }}</th>
+					<td>{{ request.sube }}</td>
 				{% endif %}
 				<td>{{ request.name }} {{ request.surname }}</td>
 				<td>{{ request.item_name }}</td>
 				<td>{{ request.reason }}</td>
-				<td>{{ request.status }}</td>
+				<td>
+					{% if request.status == 'approved' %}
+						Onaylandı
+					{% elif request.status == 'rejected' %}
+						Reddedildi
+					{% elif request.status == 'pending_manager' %}
+						Şube Müdürü Onayı Bekliyor
+					{% elif request.status == 'pending_it' %}
+						BT Onayı Bekliyor
+					{% else %}
+						{{ request.status }}
+					{% endif %}
+				</td>
+				<td>{{ request.manager_comment or 'N/A' }}</td>
+				<td>{{ request.it_comment or 'N/A' }}</td>
 				<td>
 					{% if (current_user.role == 'Şube Müdürü' or current_user.role == 'admin') and request.status == 'pending_manager' %}
-						<form action="{{ url_for('approve_request', request_id=request.id, approver_type='manager') }}"
-						      method="POST" style="display:inline;">
-							<button type="submit" class="btn btn-sm btn-success">Approve</button>
-						</form>
-						<form action="{{ url_for('reject_request', request_id=request.id, approver_type='manager') }}"
-						      method="POST" style="display:inline;">
-							<button type="submit" class="btn btn-sm btn-danger">Reject</button>
-						</form>
+						<button type="button" class="btn btn-sm btn-success"
+						        onclick="openConfirmationModal('approve', {{ request.id }}, '{{ url_for('approve_request', request_id=request.id, approver_type='manager') }}')">
+							Onayla
+						</button>
+						<button type="button" class="btn btn-sm btn-danger"
+						        onclick="openConfirmationModal('reject', {{ request.id }}, '{{ url_for('reject_request', request_id=request.id, approver_type='manager') }}')">
+							Reddet
+						</button>
 					{% elif (current_user.role == 'Bilgi Müdür' or current_user.role == 'admin') and request.status == 'pending_it' %}
-						<form action="{{ url_for('approve_request', request_id=request.id, approver_type='it') }}"
-						      method="POST" style="display:inline;">
-							<button type="submit" class="btn btn-sm btn-success">Approve</button>
-						</form>
-						<form action="{{ url_for('reject_request', request_id=request.id, approver_type='it') }}"
-						      method="POST" style="display:inline;">
-							<button type="submit" class="btn btn-sm btn-danger">Reject</button>
-						</form>
+						<button type="button" class="btn btn-sm btn-success"
+						        onclick="openConfirmationModal('approve', {{ request.id }}, '{{ url_for('approve_request', request_id=request.id, approver_type='it') }}')">
+							Onayla
+						</button>
+						<button type="button" class="btn btn-sm btn-danger"
+						        onclick="openConfirmationModal('reject', {{ request.id }}, '{{ url_for('reject_request', request_id=request.id, approver_type='it') }}')">
+							Reddet
+						</button>
 					{% endif %}
 				</td>
 			</tr>
 		{% else %}
 			<tr>
-				<td colspan="7" class="text-center">No requests found.</td>
+				<td colspan="9" class="text-center">İstek Bulunamadı</td>
 			</tr>
 		{% endfor %}
 		</tbody>
@@ -213,15 +221,15 @@
 			<div class="modal-dialog">
 				<div class="modal-content">
 					<div class="modal-header">
-						<h5 class="modal-title" id="requestItemModalLabel">Request Item</h5>
+						<h5 class="modal-title" id="requestItemModalLabel">Eşya İsteğinde Bulun</h5>
 						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 					</div>
 					<form action="{{ url_for('request_item') }}" method="POST">
 						<div class="modal-body">
 							<div class="mb-3">
-								<label for="itemName" class="form-label">Item Name</label>
+								<label for="itemName" class="form-label">Eşya Adı</label>
 								<select class="form-select" id="itemName" name="item_name" required>
-									<option value="" disabled selected>Select Item</option>
+									<option value="" disabled selected>Eşya Seçiniz</option>
 									<option value="Bilgisayar">Bilgisayar</option>
 									<option value="Fare">Fare</option>
 									<option value="Klavye">Klavye</option>
@@ -231,17 +239,73 @@
 								</select>
 							</div>
 							<div class="mb-3">
-								<label for="reason" class="form-label">Reason</label>
+								<label for="reason" class="form-label">Sebep</label>
 								<textarea class="form-control" id="reason" name="reason" rows="3" required></textarea>
 							</div>
 						</div>
 						<div class="modal-footer">
-							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-							<button type="submit" class="btn btn-primary">Submit Request</button>
+							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+							<button type="submit" class="btn btn-primary">Onayla</button>
 						</div>
 					</form>
 				</div>
 			</div>
 		</div>
 	{% endif %}
+
+	<!-- Confirmation Modal -->
+	<!-- Confirmation Modal -->
+	<div class="modal fade" id="confirmationModal" tabindex="-1" aria-labelledby="confirmationModalLabel"
+	     aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="confirmationModalLabel">Onay / Red</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Kapat"></button>
+				</div>
+				<form id="confirmationForm" method="POST">
+					<div class="modal-body">
+						<p id="actionLabel"></p>
+						<input type="hidden" name="action" id="actionType">
+						<input type="hidden" name="request_id" id="requestId">
+
+						<div class="mb-3">
+							<label for="comment" class="form-label">Yorum</label>
+							<textarea class="form-control" name="comment" id="comment"></textarea>
+						</div>
+					</div>
+					<div class="modal-footer">
+						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Kapat</button>
+						<button type="submit" class="btn btn-primary">Gönder</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+
+
+	<script>
+        let confirmationModal;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            confirmationModal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+        });
+
+        function openConfirmationModal(action, requestId, formAction) {
+            const actionLabel = document.getElementById('actionLabel');
+            if (action === 'approve') {
+                actionLabel.textContent = "Bu isteği onaylamak üzeresiniz.";
+            } else {
+                actionLabel.textContent = "Bu isteği reddetmek üzeresiniz.";
+            }
+
+            document.getElementById('actionType').value = action;
+            document.getElementById('requestId').value = requestId;
+            document.getElementById('confirmationForm').action = formAction;
+
+            confirmationModal.show();
+        }
+	</script>
+
 {% endblock %}
