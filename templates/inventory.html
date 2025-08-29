@@ -1,43 +1,51 @@
 {% extends "base.html" %}
 {% block content %}
-<h1>Envanter</h1>
-<hr>
+	<h1>Envanter</h1>
+	<hr>
 
-<table class="table table-striped">
-    <thead>
-        <tr>
-            <th>Eşya Adı</th>
-            <th>Miktar</th>
-            {% if current_user.role in ['admin', 'Bilgi Müdür'] %}
-            <th>İşlemler</th>
-            {% endif %}
-        </tr>
-    </thead>
-    <tbody>
-        {% for item in items %}
-        <tr>
-            <td>{{ item.name }}</td>
-            <td>{{ item.amount }}</td>
-            {% if current_user.role in ['admin', 'Bilgi Müdür'] %}
-            <td>
-                <form action="{{ url_for('update_item_amount') }}" method="POST" class="d-inline">
-                    <input type="hidden" name="item_name" value="{{ item.name }}">
-                    <input type="hidden" name="action" value="increase">
-                    <button type="submit" class="btn btn-sm btn-success">+</button>
-                </form>
-                <form action="{{ url_for('update_item_amount') }}" method="POST" class="d-inline">
-                    <input type="hidden" name="item_name" value="{{ item.name }}">
-                    <input type="hidden" name="action" value="decrease">
-                    <button type="submit" class="btn btn-sm btn-danger">-</button>
-                </form>
-            </td>
-            {% endif %}
-        </tr>
-        {% else %}
-        <tr>
-            <td colspan="3" class="text-center text-muted">Depoda Eşya Bulunamadı</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+	{% with messages = get_flashed_messages(with_categories=true) %}
+		{% if messages %}
+			{% for category, message in messages %}
+				<div class="alert alert-{{ category }} mt-3">{{ message }}</div>
+			{% endfor %}
+		{% endif %}
+	{% endwith %}
+
+	<table class="table table-striped">
+		<thead>
+		<tr>
+			<th>Eşya Adı</th>
+			<th>Miktar</th>
+			{% if current_user.role in ['admin', 'Bilgi Müdür'] %}
+				<th>İşlemler</th>
+			{% endif %}
+		</tr>
+		</thead>
+		<tbody>
+		{% for item in items %}
+			<tr>
+				<td>{{ item.name }}</td>
+				<td>{{ item.amount }}</td>
+				{% if current_user.role in ['admin', 'Bilgi Müdür'] %}
+					<td>
+						<form action="{{ url_for('update_item_amount') }}" method="POST" class="d-inline">
+							<input type="hidden" name="item_name" value="{{ item.name }}">
+							<input type="hidden" name="action" value="increase">
+							<button type="submit" class="btn btn-sm btn-success">+</button>
+						</form>
+						<form action="{{ url_for('update_item_amount') }}" method="POST" class="d-inline">
+							<input type="hidden" name="item_name" value="{{ item.name }}">
+							<input type="hidden" name="action" value="decrease">
+							<button type="submit" class="btn btn-sm btn-danger">-</button>
+						</form>
+					</td>
+				{% endif %}
+			</tr>
+		{% else %}
+			<tr>
+				<td colspan="3" class="text-center text-muted">Depoda Eşya Bulunamadı</td>
+			</tr>
+		{% endfor %}
+		</tbody>
+	</table>
 {% endblock %}
